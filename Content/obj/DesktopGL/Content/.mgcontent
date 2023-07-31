@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<SourceFileCollection xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <Profile>Reach</Profile>
+  <Platform>DesktopGL</Platform>
+  <Config />
+  <SourceFiles>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/../../Assets/Bullet.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/BasicArt/rockyBottomLeftCorner.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/BasicArt/rockyBottomRightCorner.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/BasicArt/rockyBottomWall.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/BasicArt/rockyFloor.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/BasicArt/rockyInnerBottomLeftCorner.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/BasicArt/rockyInnerBottomRightCorner.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/BasicArt/rockyInnerTopLeftCorner.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/BasicArt/rockyInnerTopRightCorner.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/BasicArt/rockyLeftWall.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/BasicArt/rockyLongLeftCornerWall.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/BasicArt/rockyLongRightCornerWall.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/BasicArt/rockyLongWall.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/BasicArt/rockyRightWall.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/BasicArt/rockyTopLeftCorner.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/BasicArt/rockyTopRightCorner.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/BasicArt/rockyTopWall.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/Bullets/Bullet.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/Mobs/Enemies/Skeleton.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/Player/Bobby.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/Player/Cursor.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/Player/Player.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/WorldArt/MapPictures/Boss1.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/WorldArt/MapPictures/Entrance.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/WorldArt/MapPictures/Grand1.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/WorldArt/MapPictures/Hallway1.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/WorldArt/MapPictures/Hallway2.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/WorldArt/MapPictures/Hallway3.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/WorldArt/MapPictures/Hallway4.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/WorldArt/MapPictures/Room1.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/WorldArt/MapPictures/Room2.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/WorldArt/Tilesets/Boss1.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/WorldArt/Tilesets/Entrance.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/WorldArt/Tilesets/Grand1.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/WorldArt/Tilesets/Hallway1.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/WorldArt/Tilesets/Hallway2.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/WorldArt/Tilesets/Hallway3.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/WorldArt/Tilesets/Hallway4.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/WorldArt/Tilesets/Room1.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/WorldArt/Tilesets/Room2.png</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/WorldArt/Tilesets/TestDungeon.jpg</File>
+    <File>D:/Documents/NotAnMMO/NotAnMMO/Content/WorldArt/Tilesets/TestMap.png</File>
+  </SourceFiles>
+  <DestFiles>
+    <File>Bullets/Bullet.png</File>
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+  </DestFiles>
+</SourceFileCollection>
