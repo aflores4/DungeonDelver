@@ -156,7 +156,7 @@ namespace NotAnMMO
             // Random Walks to set the dungeon tile positions
             //positions = SimpleRandomWalk(dungeonContainer, walk);
             //positions = GeneratePointsInRectangle(dungeonContainer, 1000000, 10, 125);
-            positions = GeneratePointsInRectangle(dungeonContainer, 1000000, 10, 125);
+            positions = FastRandomWalk(dungeonContainer, 1000000, 10, 125);
             System.Diagnostics.Debug.WriteLine("POSITIONS: " + positions.Count);
 
             var count = 0;
@@ -210,53 +210,53 @@ namespace NotAnMMO
         }
 
 
-        private HashSet<Vector2> SimpleRandomWalk(Rectangle container, int walkLength)
+
+
+        public HashSet<Vector2> FastRandomWalk(Rectangle container, int walkLength, int tileDistance, int seed)
         {
             HashSet<Vector2> path = new HashSet<Vector2>();
+            Random random = new Random(seed);
 
-            var previousePosition = new Vector2(((container.X + (container.Width / 2)) / 64) * 64, ((container.Y + (container.Height / 2)) / 64) * 64);
-
+            Vector2 previousePosition = new Vector2(((container.X + (container.Width / 2)) / 64) * 64, ((container.Y + (container.Height / 2)) / 64) * 64);
             path.Add(previousePosition);
 
-            player.position = previousePosition;
-
-            var initial = 0;
-
-            least = most = new Vector2(((container.X + (container.Width / 2)) / 64) * 64, ((container.Y + (container.Height / 2)) / 64) * 64);
-
-            while (true)
+            for (int i = 0; i < walkLength; i++)
             {
-                for (int i = 0; i < walkLength; i++)
+                double angle = random.Next(0, 4) * 90.0; // Randomly choose 0, 90, 180, or 270 degrees
+
+                double distance = 64.0; // Move exactly tileDistance tiles (64 pixels) in the chosen direction
+
+                double newX = previousePosition.X;
+                double newY = previousePosition.Y;
+
+                if (angle == 0) // Move right
                 {
-                    var newPosition = previousePosition + Direction2D.RandomCardinalDirection(random);
-
-                    if (newPosition.X - 128 >= container.X &&
-                         newPosition.Y - 256 >= container.Y &&
-                         newPosition.X + 192 <= container.X + container.Width &&
-                         newPosition.Y + 256 <= container.Y + container.Height)
-                    {
-                        path.Add(newPosition);
-                        mapSectionInsert(newPosition);
-                        previousePosition = newPosition;
-                    }
-                    else
-                    {
-                        i--;
-                    }
-
-                    if (path.Count >= 100000)
-                        break;
+                    newX += distance;
+                }
+                else if (angle == 90) // Move up
+                {
+                    newY -= distance;
+                }
+                else if (angle == 180) // Move left
+                {
+                    newX -= distance;
+                }
+                else if (angle == 270) // Move down
+                {
+                    newY += distance;
                 }
 
-                if (path.Count >= walkLength * 0.14 || path.Count >= 200000)
-                {
-                    break;
-                }
+                // Ensure the new point is within the container bounds
+                newX = MathHelper.Clamp((float)newX, container.X, container.Right);
+                newY = MathHelper.Clamp((float)newY, container.Y, container.Bottom);
+
+                previousePosition = new Vector2((float)newX, (float)newY);
+                path.Add(previousePosition);
             }
 
-            System.Diagnostics.Debug.WriteLine(path.Count + "\n\n");
 
-            truePositions.UnionWith(path);
+
+
 
             HashSet<Vector2> tempPath = new HashSet<Vector2>();
             tempPath.UnionWith(path);
@@ -336,16 +336,11 @@ namespace NotAnMMO
                     most.Y = r.Y;
                     bottomAnchor = r;
                 }
-
-                if (initial == 0)
-                {
-                    playerPosition = new Vector2((int)r.X + 32, (int)r.Y + 32);
-                    initial += 1;
-                }
             }
 
             return path;
         }
+
 
 
         private void mapSectionInsert(Vector2 position)
@@ -376,12 +371,267 @@ namespace NotAnMMO
         }
 
 
+
+
+
+
+
         private void setWalls(HashSet<Vector2> positions, HashSet<Vector2> wallPositions, HashSet<Vector2> walls, bool advanced)
         {
             // Sets specific kinds of tiles
             if (advanced)
             {
-                Vector2 tempPosition = new Vector2();
+                Vector2 tempPosition;
+                HashSet<Vector2> additions = new HashSet<Vector2>();
+                HashSet<Vector2> trios = new HashSet<Vector2>();
+
+                foreach (var r in wallPositions)
+                {
+                    var wallCounter = 0;
+
+                    // Up
+                    if (wallPositions.Contains(new Vector2(r.X, r.Y - 64)))
+                        wallCounter += 1;
+                    // Down
+                    if (wallPositions.Contains(new Vector2(r.X, r.Y + 64)))
+                        wallCounter += 1;
+                    // Left
+                    if (wallPositions.Contains(new Vector2(r.X - 64, r.Y)))
+                        wallCounter += 1;
+                    // Right
+                    if (wallPositions.Contains(new Vector2(r.X + 64, r.Y)))
+                        wallCounter += 1;
+
+                    if (wallCounter > 0)
+                    {
+                        // Normal Wall
+                        if ((!positions.Contains(new Vector2(r.X, r.Y - 64)) ||
+                             !positions.Contains(new Vector2(r.X, r.Y + 64)) ||
+                             !positions.Contains(new Vector2(r.X - 64, r.Y)) ||
+                             !positions.Contains(new Vector2(r.X + 64, r.Y))))
+                        {
+
+                            // Top Bottom Wall
+                            if (!positions.Contains(new Vector2(r.X, r.Y + 64)))
+                            {
+                                if (!positions.Contains(new Vector2(r.X - 64, r.Y))) // Inner Top Right Wall
+                                {
+                                    player.LoadCollider(createTile(r, "innerTopRightCorner", true));
+                                }
+                                else if (!positions.Contains(new Vector2(r.X + 64, r.Y))) // Inner Top Left Wall
+                                {
+                                    player.LoadCollider(createTile(r, "innerTopLeftCorner", true));
+                                }
+                                else
+                                {
+                                    if (wallPositions.Contains(new Vector2(r.X - 64, r.Y)) && wallPositions.Contains(new Vector2(r.X, r.Y - 64)) && !positions.Contains(new Vector2(r.X + 64, r.Y - 64)))
+                                        player.LoadCollider(createTile(r, "innerTopLeftCorner", true));
+                                    else if (wallPositions.Contains(new Vector2(r.X + 64, r.Y)) && wallPositions.Contains(new Vector2(r.X, r.Y - 64)) && !positions.Contains(new Vector2(r.X - 64, r.Y - 64)))
+                                        player.LoadCollider(createTile(r, "innerTopRightCorner", true));
+                                    else
+                                        player.LoadCollider(createTile(r, "topWall", true));
+                                }
+                            }
+                            else if (!positions.Contains(new Vector2(r.X, r.Y - 64)))
+                            {
+                                if (!positions.Contains(new Vector2(r.X - 64, r.Y))) //  Inner Bottom Right Wall
+                                {
+                                    player.LoadCollider(createTile(r, "innerBottomRightCorner", true));
+                                }
+                                else if (!positions.Contains(new Vector2(r.X + 64, r.Y))) // Inner Bottom Left Wall
+                                {
+                                    player.LoadCollider(createTile(r, "innerBottomLeftCorner", true));
+                                }
+                                else // Bottom Wall
+                                {
+                                    if (wallPositions.Contains(new Vector2(r.X - 64, r.Y)) && wallPositions.Contains(new Vector2(r.X, r.Y + 64)) && !positions.Contains(new Vector2(r.X + 64, r.Y + 64)))
+                                        player.LoadCollider(createTile(r, "innerBottomLeftCorner", true));
+                                    else if (wallPositions.Contains(new Vector2(r.X + 64, r.Y)) && wallPositions.Contains(new Vector2(r.X, r.Y + 64)) && !positions.Contains(new Vector2(r.X - 64, r.Y + 64)))
+                                        player.LoadCollider(createTile(r, "innerBottomRightCorner", true));
+                                    else
+                                    {
+                                        player.LoadCollider(createTile(r, "bottomWall", true));
+
+                                        tempPosition = new Vector2(r.X, r.Y + 64);
+
+                                        if (!wallPositions.Contains(tempPosition))
+                                        {
+                                            additions.Add(tempPosition);
+                                            walls.Add(tempPosition);
+                                            player.LoadCollider(createTile(tempPosition, "longWall", true));
+
+                                            tempPosition = new Vector2(r.X, r.Y + 128);
+
+                                            if (!wallPositions.Contains(tempPosition))
+                                            {
+                                                additions.Add(tempPosition);
+                                                walls.Add(tempPosition);
+                                                player.LoadCollider(createTile(tempPosition, "longWall", true));
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            else // Side Wall
+                            {
+
+                                tempPosition = new Vector2(r.X + 64, r.Y);
+                                if (!positions.Contains(tempPosition))
+                                {
+                                    if (wallPositions.Contains(new Vector2(r.X - 64, r.Y)) && wallPositions.Contains(new Vector2(r.X, r.Y - 64)) && !positions.Contains(new Vector2(r.X - 64, r.Y + 64)))
+                                        player.LoadCollider(createTile(r, "innerTopLeftCorner", true));
+                                    else if (wallPositions.Contains(new Vector2(r.X - 64, r.Y)) && wallPositions.Contains(new Vector2(r.X, r.Y + 64)) && !positions.Contains(new Vector2(r.X - 64, r.Y - 64)))
+                                        player.LoadCollider(createTile(r, "innerBottomLeftCorner", true));
+                                    else
+                                        player.LoadCollider(createTile(r, "leftWall", true));
+                                }
+                                else
+                                {
+                                    if (wallPositions.Contains(new Vector2(r.X + 64, r.Y)) && wallPositions.Contains(new Vector2(r.X, r.Y + 64)) && !positions.Contains(new Vector2(r.X + 64, r.Y - 64)))
+                                        player.LoadCollider(createTile(r, "innerBottomRightCorner", true));
+                                    else if (wallPositions.Contains(new Vector2(r.X + 64, r.Y)) && wallPositions.Contains(new Vector2(r.X, r.Y - 64)) && !positions.Contains(new Vector2(r.X + 64, r.Y + 64)))
+                                        player.LoadCollider(createTile(r, "innerTopRightCorner", true));
+                                    else
+                                        player.LoadCollider(createTile(r, "rightWall", true));
+                                }
+                            }
+                        }
+                        else // Corner
+                        {
+                            if (!positions.Contains(new Vector2(r.X + 64, r.Y + 64))) // Top Left Corner
+                            {
+                                player.LoadCollider(createTile(r, "topLeftCorner", true));
+                            }
+                            else if (!positions.Contains(new Vector2(r.X - 64, r.Y + 64))) // Top Right Corner
+                            {
+                                player.LoadCollider(createTile(r, "topRightCorner", true));
+                            }
+                            else if (!positions.Contains(new Vector2(r.X + 64, r.Y - 64))) // Bottom Left Corner
+                            {
+                                player.LoadCollider(createTile(r, "bottomLeftCorner", true));
+
+                                tempPosition = new Vector2(r.X, r.Y + 64);
+                                if (!wallPositions.Contains(tempPosition))
+                                {
+                                    additions.Add(tempPosition);
+                                    walls.Add(tempPosition);
+                                    player.LoadCollider(createTile(tempPosition, "longLeftCornerWall", true));
+
+                                    tempPosition = new Vector2(r.X, r.Y + 128);
+
+                                    if (!wallPositions.Contains(tempPosition))
+                                    {
+                                        additions.Add(tempPosition);
+                                        walls.Add(tempPosition);
+                                        player.LoadCollider(createTile(tempPosition, "longLeftCornerWall", true));
+                                    }
+                                }
+                            }
+                            else // Bottom Right Corner
+                            {
+                                player.LoadCollider(createTile(r, "bottomRightCorner", true));
+
+                                tempPosition = new Vector2(r.X, r.Y + 64);
+
+                                if (!wallPositions.Contains(tempPosition))
+                                {
+                                    additions.Add(tempPosition);
+                                    walls.Add(tempPosition);
+                                    player.LoadCollider(createTile(tempPosition, "longRightCornerWall", true));
+
+                                    tempPosition = new Vector2(r.X, r.Y + 128);
+
+                                    if (!wallPositions.Contains(tempPosition))
+                                    {
+                                        additions.Add(tempPosition);
+                                        walls.Add(tempPosition);
+                                        player.LoadCollider(createTile(tempPosition, "longRightCornerWall", true));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        trios.Add(r);
+                    }
+                }
+
+                foreach (var r in trios)
+                {
+                    var counter = 0;
+
+                    if (!positions.Contains(new Vector2(r.X - 64, r.Y)))
+                        counter += 1;
+                    if (!positions.Contains(new Vector2(r.X, r.Y - 64)))
+                        counter += 1;
+                    if (!positions.Contains(new Vector2(r.X + 64, r.Y)))
+                        counter += 1;
+                    if (!positions.Contains(new Vector2(r.X, r.Y + 64)))
+                        counter += 1;
+                    if (!positions.Contains(new Vector2(r.X - 64, r.Y - 64)))
+                        counter += 1;
+                    if (!positions.Contains(new Vector2(r.X - 64, r.Y + 64)))
+                        counter += 1;
+                    if (!positions.Contains(new Vector2(r.X + 64, r.Y + 64)))
+                        counter += 1;
+                    if (!positions.Contains(new Vector2(r.X + 64, r.Y - 64)))
+                        counter += 1;
+
+                        player.LoadCollider(createTile(r, "trio", true));
+                        System.Diagnostics.Debug.WriteLine("what do i do?");
+                }
+
+                foreach (var r in additions)
+                {
+                    wallPositions.Add(r);
+                }
+            }
+            else
+            {
+                // Sets wall positions from all tile position
+                foreach (var r in positions)
+                {
+                    if (
+                        !positions.Contains(new Vector2(r.X - 64, r.Y)) ||
+                        !positions.Contains(new Vector2(r.X - 64, r.Y - 64)) ||
+                        !positions.Contains(new Vector2(r.X - 64, r.Y + 64)) ||
+                        !positions.Contains(new Vector2(r.X + 64, r.Y)) ||
+                        !positions.Contains(new Vector2(r.X + 64, r.Y - 64)) ||
+                        !positions.Contains(new Vector2(r.X + 64, r.Y + 64)) ||
+                        !positions.Contains(new Vector2(r.X, r.Y - 64)) ||
+                        !positions.Contains(new Vector2(r.X, r.Y + 64)))
+                    {
+                        wallPositions.Add(new Vector2(r.X, r.Y));
+                        walls.Add(new Vector2(r.X, r.Y));
+                    }
+                }
+            }
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        /*
+        private void setWalls(HashSet<Vector2> positions, HashSet<Vector2> wallPositions, HashSet<Vector2> walls, bool advanced)
+        {
+            // Sets specific kinds of tiles
+            if (advanced)
+            {
+                foreach (var r in wallPositions)
+                    player.LoadCollider(createTile(r, "rightWall", true));
+
+                /*Vector2 tempPosition = new Vector2();
 
 
                 // Sets the Walls and the Corner tiles
@@ -519,169 +769,10 @@ namespace NotAnMMO
                         cornerCount += 1;
 
                     if (wallPositions.Contains(new Vector2(r.X, r.Y - 64)))
-                        cornerCount += 1;*/
+                        cornerCount += 1;
 
 
-                    // Normal Wall
-                    /*if ((!positions.Contains(new Vector2(r.X, r.Y - 64)) ||
-                            !positions.Contains(new Vector2(r.X, r.Y + 64)) ||
-                            !positions.Contains(new Vector2(r.X - 64, r.Y)) ||
-                            !positions.Contains(new Vector2(r.X + 64, r.Y))))
-                    {*/
-
-
-
-
-
-                    /*
-                    // Top Bottom Wall
-                    if (!positions.Contains(new Vector2(r.X, r.Y + 64)))
-                    {
-                        if (!positions.Contains(new Vector2(r.X - 64, r.Y))) // Inner Top Right Wall
-                        {
-                            innerTopRightWalls.Add(r);
-                            player.LoadCollider(createTile(r, "innerTopRightCorner", true));
-                        }
-                        else if (!positions.Contains(new Vector2(r.X + 64, r.Y))) // Inner Top Left Wall
-                        {
-                            innerTopLeftWalls.Add(r);
-                            player.LoadCollider(createTile(r, "innerTopLeftCorner", true));
-                        }
-                        else // Top Bottom Wall
-                        {
-                            bottomWalls.Add(r);
-                            player.LoadCollider(createTile(r, "topWall", true));
-                        }
-                    }
-                    else if (!positions.Contains(new Vector2(r.X, r.Y - 64)))
-                    {
-                        if (!positions.Contains(new Vector2(r.X - 64, r.Y))) //  Inner Bottom Right Wall
-                        {
-                            innerBottomRightWalls.Add(r);
-                            player.LoadCollider(createTile(r, "innerBottomRightCorner", true));
-                        }
-                        else if (!positions.Contains(new Vector2(r.X + 64, r.Y))) // Inner Bottom Left Wall
-                        {
-                            innerBottomLeftWalls.Add(r);
-                            player.LoadCollider(createTile(r, "innerBottomLeftCorner", true));
-                        }
-                        else // Top Bottom Wall
-                        {
-                            topWalls.Add(r);
-                            player.LoadCollider(createTile(r, "bottomWall", true));
-                        }
-                    }
-                    else // Side Wall
-                    {
-
-                        tempPosition = new Vector2(r.X + 64, r.Y);
-                        if (!positions.Contains(tempPosition))
-                        {
-                            player.LoadCollider(createTile(r, "leftWall", true));
-                        }
-                        else
-                        {
-                            if (wallPositions.Contains(new Vector2(r.X + 64, r.Y)) && wallPositions.Contains(new Vector2(r.X, r.Y + 64)) && !wallPositions.Contains(new Vector2(r.X + 64, r.Y  - 64)))
-                                player.LoadCollider(createTile(r, "innerBottomRightCorner", true));
-                            else
-                                player.LoadCollider(createTile(r, "rightWall", true));
-                        }
-                    }*/
-
-
-                    /*
-                    else // Corner
-                    {
-                        if (!positions.Contains(new Vector2(r.X + 64, r.Y + 64))) // Top Left Corner
-                        {
-                            topLeftWalls.Add(r);
-                            player.LoadCollider(createTile(r, "topLeftCorner", true));
-                        }
-                        else if (!positions.Contains(new Vector2(r.X - 64, r.Y + 64))) // Top Right Corner
-                        {
-                            topRightWalls.Add(r);
-                            player.LoadCollider(createTile(r, "topRightCorner", true));
-                        }
-                        else if (!positions.Contains(new Vector2(r.X + 64, r.Y - 64))) // Bottom Left Corner
-                        {
-                            bottomLeftWalls.Add(r);
-                            player.LoadCollider(createTile(r, "bottomLeftCorner", true));
-                        }
-                        else // Bottom Right Corner
-                        {
-                            bottomRightWalls.Add(r);
-                            player.LoadCollider(createTile(r, "bottomRightCorner", true));
-                        }
-                    }*/
-                }
-
-                /*
-                // Adds Long Walls
-                foreach (var r in topWalls)
-                {
-                    if (positions.Contains(new Vector2(r.X, r.Y + 64)) && !wallPositions.Contains(new Vector2(r.X, r.Y + 64)))
-                    {
-                        tempPosition = new Vector2(r.X, r.Y + 64);
-                        longWalls.Add(tempPosition);
-                        wallPositions.Add(tempPosition);
-                        walls.Add(tempPosition);
-                        player.LoadCollider(createTile(tempPosition, "longWall", true));
-                    }
-
-                    if (positions.Contains(new Vector2(r.X, r.Y + 128)) && !wallPositions.Contains(new Vector2(r.X, r.Y + 128)))
-                    {
-                        tempPosition = new Vector2(r.X, r.Y + 128);
-                        longWalls.Add(tempPosition);
-                        wallPositions.Add(tempPosition);
-                        walls.Add(tempPosition);
-                        player.LoadCollider(createTile(tempPosition, "longWall", true));
-                    }
-                }
-
-
-                // Adds Long Left Corner Walls
-                foreach (var r in bottomLeftWalls)
-                {
-                    if (positions.Contains(new Vector2(r.X, r.Y + 64)) && !wallPositions.Contains(new Vector2(r.X, r.Y + 64)))
-                    {
-                        tempPosition = new Vector2(r.X, r.Y + 64);
-                        longLeftCornerWalls.Add(tempPosition);
-                        wallPositions.Add(tempPosition);
-                        walls.Add(tempPosition);
-                        player.LoadCollider(createTile(tempPosition, "longLeftCornerWall", true));
-                    }
-
-                    if (positions.Contains(new Vector2(r.X, r.Y + 128)) && !wallPositions.Contains(new Vector2(r.X, r.Y + 128)))
-                    {
-                        tempPosition = new Vector2(r.X, r.Y + 128);
-                        longLeftCornerWalls.Add(tempPosition);
-                        wallPositions.Add(tempPosition);
-                        walls.Add(tempPosition);
-                        player.LoadCollider(createTile(tempPosition, "longLeftCornerWall", true));
-                    }
-                }
-
-                // Adds Long Right Corner Walls
-                foreach (var r in bottomRightWalls)
-                {
-                    if (positions.Contains(new Vector2(r.X, r.Y + 64)) && !wallPositions.Contains(new Vector2(r.X, r.Y + 64)))
-                    {
-                        tempPosition = new Vector2(r.X, r.Y + 64);
-                        longRightCornerWalls.Add(tempPosition);
-                        wallPositions.Add(tempPosition);
-                        walls.Add(tempPosition);
-                        player.LoadCollider(createTile(tempPosition, "longRightCornerWall", true));
-                    }
-
-                    if (positions.Contains(new Vector2(r.X, r.Y + 128)) && !wallPositions.Contains(new Vector2(r.X, r.Y + 128)))
-                    {
-                        tempPosition = new Vector2(r.X, r.Y + 128);
-                        longRightCornerWalls.Add(tempPosition);
-                        wallPositions.Add(tempPosition);
-                        walls.Add(tempPosition);
-                        player.LoadCollider(createTile(tempPosition, "longRightCornerWall", true));
-                    }
-                }*/
+                
             }
             // Simply sets what tiles are general walls
             else
@@ -705,7 +796,7 @@ namespace NotAnMMO
                 }
             }
         }
-
+        */
 
         private void setFloors()
         {
@@ -737,9 +828,6 @@ namespace NotAnMMO
 
         private void createSpawns()
         {
-            
-
-            
             Stopwatch stopwatch = new Stopwatch();
 
             var es = 10;
@@ -802,134 +890,7 @@ namespace NotAnMMO
         }
 
 
-        public HashSet<Vector2> GeneratePointsInRectangle(Rectangle container, int walkLength, int tileDistance, int seed)
-        {
-            HashSet<Vector2> path = new HashSet<Vector2>();
-            Random random = new Random(seed);
-
-            Vector2 previousePosition = new Vector2(((container.X + (container.Width / 2)) / 64) * 64, ((container.Y + (container.Height / 2)) / 64) * 64);
-            path.Add(previousePosition);
-
-            for (int i = 0; i < walkLength; i++)
-            {
-                double angle = random.Next(0, 4) * 90.0; // Randomly choose 0, 90, 180, or 270 degrees
-
-                double distance = 64.0; // Move exactly tileDistance tiles (64 pixels) in the chosen direction
-
-                double newX = previousePosition.X;
-                double newY = previousePosition.Y;
-
-                if (angle == 0) // Move right
-                {
-                    newX += distance;
-                }
-                else if (angle == 90) // Move up
-                {
-                    newY -= distance;
-                }
-                else if (angle == 180) // Move left
-                {
-                    newX -= distance;
-                }
-                else if (angle == 270) // Move down
-                {
-                    newY += distance;
-                }
-
-                // Ensure the new point is within the container bounds
-                newX = MathHelper.Clamp((float)newX, container.X, container.Right);
-                newY = MathHelper.Clamp((float)newY, container.Y, container.Bottom);
-
-                previousePosition = new Vector2((float)newX, (float)newY);
-                path.Add(previousePosition);
-            }
-
-
-
-
-
-            HashSet<Vector2> tempPath = new HashSet<Vector2>();
-            tempPath.UnionWith(path);
-
-            foreach (var r in tempPath)
-            {
-                // First layer
-                path.Add(new Vector2((int)r.X + 64, (int)r.Y));
-                path.Add(new Vector2((int)r.X - 64, (int)r.Y));
-                path.Add(new Vector2((int)r.X, (int)r.Y + 64));
-                path.Add(new Vector2((int)r.X, (int)r.Y - 64));
-                path.Add(new Vector2((int)r.X + 64, (int)r.Y + 64));
-                path.Add(new Vector2((int)r.X + 64, (int)r.Y - 64));
-                path.Add(new Vector2((int)r.X - 64, (int)r.Y + 64));
-                path.Add(new Vector2((int)r.X - 64, (int)r.Y - 64));
-
-
-                // Second Layer
-                path.Add(new Vector2((int)r.X - 128, (int)r.Y));
-                path.Add(new Vector2((int)r.X - 128, (int)r.Y + 64));
-                path.Add(new Vector2((int)r.X - 128, (int)r.Y + 128));
-                path.Add(new Vector2((int)r.X - 128, (int)r.Y - 64));
-                path.Add(new Vector2((int)r.X - 128, (int)r.Y - 128));
-                path.Add(new Vector2((int)r.X - 64, (int)r.Y - 128));
-                path.Add(new Vector2((int)r.X - 64, (int)r.Y + 128));
-                path.Add(new Vector2((int)r.X, (int)r.Y - 128));
-                path.Add(new Vector2((int)r.X, (int)r.Y + 128));
-                path.Add(new Vector2((int)r.X + 64, (int)r.Y - 128));
-                path.Add(new Vector2((int)r.X + 64, (int)r.Y + 128));
-                path.Add(new Vector2((int)r.X + 128, (int)r.Y));
-                path.Add(new Vector2((int)r.X + 128, (int)r.Y + 64));
-                path.Add(new Vector2((int)r.X + 128, (int)r.Y + 128));
-                path.Add(new Vector2((int)r.X + 128, (int)r.Y - 64));
-                path.Add(new Vector2((int)r.X + 128, (int)r.Y - 128));
-
-
-                // Additional top tiles
-                path.Add(new Vector2((int)r.X - 128, (int)r.Y - 192));
-                path.Add(new Vector2((int)r.X - 64, (int)r.Y - 192));
-                path.Add(new Vector2((int)r.X, (int)r.Y - 192));
-                path.Add(new Vector2((int)r.X + 64, (int)r.Y - 192));
-                path.Add(new Vector2((int)r.X + 128, (int)r.Y - 192));
-                // Additional top tiles
-                path.Add(new Vector2((int)r.X - 128, (int)r.Y - 256));
-                path.Add(new Vector2((int)r.X - 64, (int)r.Y - 256));
-                path.Add(new Vector2((int)r.X, (int)r.Y - 256));
-                path.Add(new Vector2((int)r.X + 64, (int)r.Y - 256));
-                path.Add(new Vector2((int)r.X + 128, (int)r.Y - 256));
-
-                // Additional bottom tiles
-                path.Add(new Vector2((int)r.X - 128, (int)r.Y + 192));
-                path.Add(new Vector2((int)r.X - 64, (int)r.Y + 192));
-                path.Add(new Vector2((int)r.X, (int)r.Y + 192));
-                path.Add(new Vector2((int)r.X + 64, (int)r.Y + 192));
-                path.Add(new Vector2((int)r.X + 128, (int)r.Y + 192));
-
-                if (r.X <= least.X)
-                {
-                    least.X = r.X;
-                    leftAnchor = r;
-                }
-
-                if (r.Y <= least.Y)
-                {
-                    least.Y = r.Y;
-                    topAnchor = r;
-                }
-
-                if (r.X >= most.X)
-                {
-                    most.X = r.X;
-                    rightAnchor = r;
-                }
-
-                if (r.Y >= most.Y)
-                {
-                    most.Y = r.Y;
-                    bottomAnchor = r;
-                }
-            }
-
-            return path;
-        }
+        
 
 
 
@@ -1106,6 +1067,9 @@ namespace NotAnMMO
     }
     
 }
+
+// Perlin Noise
+/*
 public class PerlinNoise
 {
     private int[] permutation;
@@ -1166,9 +1130,9 @@ public class PerlinNoise
                (v * (Grad(permutation[AA + 1], x, y - 1) - Grad(permutation[AA], x, y)));
     }
 }
+*/
 
-
-
+/*
 public class PointGenerator
 {
     public List<Vector2> GeneratePointsInRectangle(Rectangle rectangle, int numberOfPoints, double scale, int seed)
@@ -1195,3 +1159,144 @@ public class PointGenerator
         return points;
     }
 }
+*/
+
+
+
+/*
+        private HashSet<Vector2> SimpleRandomWalk(Rectangle container, int walkLength)
+        {
+            HashSet<Vector2> path = new HashSet<Vector2>();
+
+            var previousePosition = new Vector2(((container.X + (container.Width / 2)) / 64) * 64, ((container.Y + (container.Height / 2)) / 64) * 64);
+
+            path.Add(previousePosition);
+
+            player.position = previousePosition;
+
+            var initial = 0;
+
+            least = most = new Vector2(((container.X + (container.Width / 2)) / 64) * 64, ((container.Y + (container.Height / 2)) / 64) * 64);
+
+            while (true)
+            {
+                for (int i = 0; i < walkLength; i++)
+                {
+                    var newPosition = previousePosition + Direction2D.RandomCardinalDirection(random);
+
+                    if (newPosition.X - 128 >= container.X &&
+                         newPosition.Y - 256 >= container.Y &&
+                         newPosition.X + 192 <= container.X + container.Width &&
+                         newPosition.Y + 256 <= container.Y + container.Height)
+                    {
+                        path.Add(newPosition);
+                        mapSectionInsert(newPosition);
+                        previousePosition = newPosition;
+                    }
+                    else
+                    {
+                        i--;
+                    }
+
+                    if (path.Count >= 100000)
+                        break;
+                }
+
+                if (path.Count >= walkLength * 0.14 || path.Count >= 200000)
+                {
+                    break;
+                }
+            }
+
+            System.Diagnostics.Debug.WriteLine(path.Count + "\n\n");
+
+            truePositions.UnionWith(path);
+
+            HashSet<Vector2> tempPath = new HashSet<Vector2>();
+            tempPath.UnionWith(path);
+
+            foreach (var r in tempPath)
+            {
+                // First layer
+                path.Add(new Vector2((int)r.X + 64, (int)r.Y));
+                path.Add(new Vector2((int)r.X - 64, (int)r.Y));
+                path.Add(new Vector2((int)r.X, (int)r.Y + 64));
+                path.Add(new Vector2((int)r.X, (int)r.Y - 64));
+                path.Add(new Vector2((int)r.X + 64, (int)r.Y + 64));
+                path.Add(new Vector2((int)r.X + 64, (int)r.Y - 64));
+                path.Add(new Vector2((int)r.X - 64, (int)r.Y + 64));
+                path.Add(new Vector2((int)r.X - 64, (int)r.Y - 64));
+
+
+                // Second Layer
+                path.Add(new Vector2((int)r.X - 128, (int)r.Y));
+                path.Add(new Vector2((int)r.X - 128, (int)r.Y + 64));
+                path.Add(new Vector2((int)r.X - 128, (int)r.Y + 128));
+                path.Add(new Vector2((int)r.X - 128, (int)r.Y - 64));
+                path.Add(new Vector2((int)r.X - 128, (int)r.Y - 128));
+                path.Add(new Vector2((int)r.X - 64, (int)r.Y - 128));
+                path.Add(new Vector2((int)r.X - 64, (int)r.Y + 128));
+                path.Add(new Vector2((int)r.X, (int)r.Y - 128));
+                path.Add(new Vector2((int)r.X, (int)r.Y + 128));
+                path.Add(new Vector2((int)r.X + 64, (int)r.Y - 128));
+                path.Add(new Vector2((int)r.X + 64, (int)r.Y + 128));
+                path.Add(new Vector2((int)r.X + 128, (int)r.Y));
+                path.Add(new Vector2((int)r.X + 128, (int)r.Y + 64));
+                path.Add(new Vector2((int)r.X + 128, (int)r.Y + 128));
+                path.Add(new Vector2((int)r.X + 128, (int)r.Y - 64));
+                path.Add(new Vector2((int)r.X + 128, (int)r.Y - 128));
+
+
+                // Additional top tiles
+                path.Add(new Vector2((int)r.X - 128, (int)r.Y - 192));
+                path.Add(new Vector2((int)r.X - 64, (int)r.Y - 192));
+                path.Add(new Vector2((int)r.X, (int)r.Y - 192));
+                path.Add(new Vector2((int)r.X + 64, (int)r.Y - 192));
+                path.Add(new Vector2((int)r.X + 128, (int)r.Y - 192));
+                // Additional top tiles
+                path.Add(new Vector2((int)r.X - 128, (int)r.Y - 256));
+                path.Add(new Vector2((int)r.X - 64, (int)r.Y - 256));
+                path.Add(new Vector2((int)r.X, (int)r.Y - 256));
+                path.Add(new Vector2((int)r.X + 64, (int)r.Y - 256));
+                path.Add(new Vector2((int)r.X + 128, (int)r.Y - 256));
+
+                // Additional bottom tiles
+                path.Add(new Vector2((int)r.X - 128, (int)r.Y + 192));
+                path.Add(new Vector2((int)r.X - 64, (int)r.Y + 192));
+                path.Add(new Vector2((int)r.X, (int)r.Y + 192));
+                path.Add(new Vector2((int)r.X + 64, (int)r.Y + 192));
+                path.Add(new Vector2((int)r.X + 128, (int)r.Y + 192));
+
+                if (r.X <= least.X)
+                {
+                    least.X = r.X;
+                    leftAnchor = r;
+                }
+
+                if (r.Y <= least.Y)
+                {
+                    least.Y = r.Y;
+                    topAnchor = r;
+                }
+
+                if (r.X >= most.X)
+                {
+                    most.X = r.X;
+                    rightAnchor = r;
+                }
+
+                if (r.Y >= most.Y)
+                {
+                    most.Y = r.Y;
+                    bottomAnchor = r;
+                }
+
+                if (initial == 0)
+                {
+                    playerPosition = new Vector2((int)r.X + 32, (int)r.Y + 32);
+                    initial += 1;
+                }
+            }
+
+            return path;
+        }*/
