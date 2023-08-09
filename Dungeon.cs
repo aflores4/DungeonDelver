@@ -139,24 +139,40 @@ namespace NotAnMMO
          */
         private void GenerateDungeon(HashSet<Vector2> walls, GraphicsDevice graphics, Camera camera)
         {
-            var level = 100;
+            var level = 16;
 
-            // Max = 500,000, Min = 5,000
-            var walk = (int)(level * 15.625 * 64);
+            var walk = 0;
+            if (level <= 100)
+                walk = (int)(((int)((level * level) / (4.2f)) + 140) * 71.428);
+            else
+                walk = (int)(240000 * (1 - Math.Pow(Math.E, -0.05 * (level - 72.4))));
 
-            //var shrinker = (float)random.Next(10, 26) / 100;
-            var shrinker = (float)40 / level;
+            var scale = 0f;
+            if (level < 15)
+                scale = 2.4f;
+            else if (level < 25)
+                scale = 2.0f;
+            else if (level < 50)
+                scale = 1.8f;
+            else if (level < 75)
+                scale = 1.6f;
+            else
+                scale = 1.4f;
 
-            dungeonContainer = new Rectangle(0, 0, (int)((walk * shrinker) / 64) * 64, (int)((walk * shrinker) / 64) * 64);
+
+            var levelSize = (int)(Math.Sqrt(walk) * scale);
+
+
+            dungeonContainer = new Rectangle(0, 0, levelSize * 64, levelSize * 64);
+            debugRectangle = dungeonContainer;
 
 
             // Creates Map Sections
             createMapSections(graphics);
 
+
             // Random Walks to set the dungeon tile positions
-            //positions = SimpleRandomWalk(dungeonContainer, walk);
-            //positions = GeneratePointsInRectangle(dungeonContainer, 1000000, 10, 125);
-            positions = FastRandomWalk(dungeonContainer, 1000000, 10, 125);
+            positions = FastRandomWalk(dungeonContainer, walk, level + random.Next(0, 100000000));
             System.Diagnostics.Debug.WriteLine("POSITIONS: " + positions.Count);
 
             var count = 0;
@@ -180,17 +196,11 @@ namespace NotAnMMO
             most.Y = (bottomAnchor.Y += (64 * 3)) + 64;
 
 
-            // Sets the temporary dungeon container after adding the spawn room
-            Rectangle tempDungeonContainer = new Rectangle((int)least.X, (int)least.Y, (int)most.X - (int)least.X, (int)most.Y - (int)least.Y);
-
-
             // Sets general wall positions
             setWalls(positions, wallPositions, walls, false);
 
-
             // Sets dungeon container to the appropriate container only fitting the dungeon tiles
-            dungeonContainer = tempDungeonContainer;
-
+            dungeonContainer = new Rectangle((int)least.X, (int)least.Y, (int)most.X - (int)least.X, (int)most.Y - (int)least.Y);
 
             // Sets floor tiles
             setFloors();
@@ -198,9 +208,7 @@ namespace NotAnMMO
             // Sets specifc wall positions
             setWalls(positions, wallPositions, walls, true);
 
-            
             System.Diagnostics.Debug.WriteLine("Map Sections: " + mapSections.GetLength(0) + ", " + mapSections.GetLength(1) + "\n");
-
 
             // Creates spawns for enemies, and structures
             createSpawns();
@@ -211,10 +219,10 @@ namespace NotAnMMO
 
 
 
-
-        public HashSet<Vector2> FastRandomWalk(Rectangle container, int walkLength, int tileDistance, int seed)
+        public HashSet<Vector2> FastRandomWalk(Rectangle container, int walkLength, int seed)
         {
             HashSet<Vector2> path = new HashSet<Vector2>();
+            HashSet<Vector2> addedPath = new HashSet<Vector2>();
             Random random = new Random(seed);
 
             Vector2 previousePosition = new Vector2(((container.X + (container.Width / 2)) / 64) * 64, ((container.Y + (container.Height / 2)) / 64) * 64);
@@ -224,7 +232,7 @@ namespace NotAnMMO
             {
                 double angle = random.Next(0, 4) * 90.0; // Randomly choose 0, 90, 180, or 270 degrees
 
-                double distance = 64.0; // Move exactly tileDistance tiles (64 pixels) in the chosen direction
+                double distance = 64.0; // Move a tile length
 
                 double newX = previousePosition.X;
                 double newY = previousePosition.Y;
@@ -251,92 +259,96 @@ namespace NotAnMMO
                 newY = MathHelper.Clamp((float)newY, container.Y, container.Bottom);
 
                 previousePosition = new Vector2((float)newX, (float)newY);
+
+                // Checks to see if the position has already been added to the collection of positions
+                if (path.Contains(previousePosition))
+                {
+                    i--;
+                }
+                else // If not a repeat then add additional positions to the additional path collection
+                {
+                    // First layer
+                    addedPath.Add(new Vector2((int)previousePosition.X + 64, (int)previousePosition.Y));
+                    addedPath.Add(new Vector2((int)previousePosition.X - 64, (int)previousePosition.Y));
+                    addedPath.Add(new Vector2((int)previousePosition.X, (int)previousePosition.Y + 64));
+                    addedPath.Add(new Vector2((int)previousePosition.X, (int)previousePosition.Y - 64));
+                    addedPath.Add(new Vector2((int)previousePosition.X + 64, (int)previousePosition.Y + 64));
+                    addedPath.Add(new Vector2((int)previousePosition.X + 64, (int)previousePosition.Y - 64));
+                    addedPath.Add(new Vector2((int)previousePosition.X - 64, (int)previousePosition.Y + 64));
+                    addedPath.Add(new Vector2((int)previousePosition.X - 64, (int)previousePosition.Y - 64));
+
+
+                    // Second Layer
+                    addedPath.Add(new Vector2((int)previousePosition.X - 128, (int)previousePosition.Y));
+                    addedPath.Add(new Vector2((int)previousePosition.X - 128, (int)previousePosition.Y + 64));
+                    addedPath.Add(new Vector2((int)previousePosition.X - 128, (int)previousePosition.Y + 128));
+                    addedPath.Add(new Vector2((int)previousePosition.X - 128, (int)previousePosition.Y - 64));
+                    addedPath.Add(new Vector2((int)previousePosition.X - 128, (int)previousePosition.Y - 128));
+                    addedPath.Add(new Vector2((int)previousePosition.X - 64, (int)previousePosition.Y - 128));
+                    addedPath.Add(new Vector2((int)previousePosition.X - 64, (int)previousePosition.Y + 128));
+                    addedPath.Add(new Vector2((int)previousePosition.X, (int)previousePosition.Y - 128));
+                    addedPath.Add(new Vector2((int)previousePosition.X, (int)previousePosition.Y + 128));
+                    addedPath.Add(new Vector2((int)previousePosition.X + 64, (int)previousePosition.Y - 128));
+                    addedPath.Add(new Vector2((int)previousePosition.X + 64, (int)previousePosition.Y + 128));
+                    addedPath.Add(new Vector2((int)previousePosition.X + 128, (int)previousePosition.Y));
+                    addedPath.Add(new Vector2((int)previousePosition.X + 128, (int)previousePosition.Y + 64));
+                    addedPath.Add(new Vector2((int)previousePosition.X + 128, (int)previousePosition.Y + 128));
+                    addedPath.Add(new Vector2((int)previousePosition.X + 128, (int)previousePosition.Y - 64));
+                    addedPath.Add(new Vector2((int)previousePosition.X + 128, (int)previousePosition.Y - 128));
+
+
+                    // Additional top tiles
+                    addedPath.Add(new Vector2((int)previousePosition.X - 128, (int)previousePosition.Y - 192));
+                    addedPath.Add(new Vector2((int)previousePosition.X - 64, (int)previousePosition.Y - 192));
+                    addedPath.Add(new Vector2((int)previousePosition.X, (int)previousePosition.Y - 192));
+                    addedPath.Add(new Vector2((int)previousePosition.X + 64, (int)previousePosition.Y - 192));
+                    addedPath.Add(new Vector2((int)previousePosition.X + 128, (int)previousePosition.Y - 192));
+                    // Additional top tiles
+                    addedPath.Add(new Vector2((int)previousePosition.X - 128, (int)previousePosition.Y - 256));
+                    addedPath.Add(new Vector2((int)previousePosition.X - 64, (int)previousePosition.Y - 256));
+                    addedPath.Add(new Vector2((int)previousePosition.X, (int)previousePosition.Y - 256));
+                    addedPath.Add(new Vector2((int)previousePosition.X + 64, (int)previousePosition.Y - 256));
+                    addedPath.Add(new Vector2((int)previousePosition.X + 128, (int)previousePosition.Y - 256));
+
+                    // Additional bottom tiles
+                    addedPath.Add(new Vector2((int)previousePosition.X - 128, (int)previousePosition.Y + 192));
+                    addedPath.Add(new Vector2((int)previousePosition.X - 64, (int)previousePosition.Y + 192));
+                    addedPath.Add(new Vector2((int)previousePosition.X, (int)previousePosition.Y + 192));
+                    addedPath.Add(new Vector2((int)previousePosition.X + 64, (int)previousePosition.Y + 192));
+                    addedPath.Add(new Vector2((int)previousePosition.X + 128, (int)previousePosition.Y + 192));
+
+
+                    // List of checks to set the least and most positions
+                    if (previousePosition.X <= least.X)
+                    {
+                        least.X = previousePosition.X;
+                        leftAnchor = previousePosition;
+                    }
+
+                    if (previousePosition.Y <= least.Y)
+                    {
+                        least.Y = previousePosition.Y;
+                        topAnchor = previousePosition;
+                    }
+
+                    if (previousePosition.X >= most.X)
+                    {
+                        most.X = previousePosition.X;
+                        rightAnchor = previousePosition;
+                    }
+
+                    if (previousePosition.Y >= most.Y)
+                    {
+                        most.Y = previousePosition.Y;
+                        bottomAnchor = previousePosition;
+                    }
+                }
+
                 path.Add(previousePosition);
             }
 
-
-
-
-
-            HashSet<Vector2> tempPath = new HashSet<Vector2>();
-            tempPath.UnionWith(path);
-
-            foreach (var r in tempPath)
-            {
-                // First layer
-                path.Add(new Vector2((int)r.X + 64, (int)r.Y));
-                path.Add(new Vector2((int)r.X - 64, (int)r.Y));
-                path.Add(new Vector2((int)r.X, (int)r.Y + 64));
-                path.Add(new Vector2((int)r.X, (int)r.Y - 64));
-                path.Add(new Vector2((int)r.X + 64, (int)r.Y + 64));
-                path.Add(new Vector2((int)r.X + 64, (int)r.Y - 64));
-                path.Add(new Vector2((int)r.X - 64, (int)r.Y + 64));
-                path.Add(new Vector2((int)r.X - 64, (int)r.Y - 64));
-
-
-                // Second Layer
-                path.Add(new Vector2((int)r.X - 128, (int)r.Y));
-                path.Add(new Vector2((int)r.X - 128, (int)r.Y + 64));
-                path.Add(new Vector2((int)r.X - 128, (int)r.Y + 128));
-                path.Add(new Vector2((int)r.X - 128, (int)r.Y - 64));
-                path.Add(new Vector2((int)r.X - 128, (int)r.Y - 128));
-                path.Add(new Vector2((int)r.X - 64, (int)r.Y - 128));
-                path.Add(new Vector2((int)r.X - 64, (int)r.Y + 128));
-                path.Add(new Vector2((int)r.X, (int)r.Y - 128));
-                path.Add(new Vector2((int)r.X, (int)r.Y + 128));
-                path.Add(new Vector2((int)r.X + 64, (int)r.Y - 128));
-                path.Add(new Vector2((int)r.X + 64, (int)r.Y + 128));
-                path.Add(new Vector2((int)r.X + 128, (int)r.Y));
-                path.Add(new Vector2((int)r.X + 128, (int)r.Y + 64));
-                path.Add(new Vector2((int)r.X + 128, (int)r.Y + 128));
-                path.Add(new Vector2((int)r.X + 128, (int)r.Y - 64));
-                path.Add(new Vector2((int)r.X + 128, (int)r.Y - 128));
-
-
-                // Additional top tiles
-                path.Add(new Vector2((int)r.X - 128, (int)r.Y - 192));
-                path.Add(new Vector2((int)r.X - 64, (int)r.Y - 192));
-                path.Add(new Vector2((int)r.X, (int)r.Y - 192));
-                path.Add(new Vector2((int)r.X + 64, (int)r.Y - 192));
-                path.Add(new Vector2((int)r.X + 128, (int)r.Y - 192));
-                // Additional top tiles
-                path.Add(new Vector2((int)r.X - 128, (int)r.Y - 256));
-                path.Add(new Vector2((int)r.X - 64, (int)r.Y - 256));
-                path.Add(new Vector2((int)r.X, (int)r.Y - 256));
-                path.Add(new Vector2((int)r.X + 64, (int)r.Y - 256));
-                path.Add(new Vector2((int)r.X + 128, (int)r.Y - 256));
-
-                // Additional bottom tiles
-                path.Add(new Vector2((int)r.X - 128, (int)r.Y + 192));
-                path.Add(new Vector2((int)r.X - 64, (int)r.Y + 192));
-                path.Add(new Vector2((int)r.X, (int)r.Y + 192));
-                path.Add(new Vector2((int)r.X + 64, (int)r.Y + 192));
-                path.Add(new Vector2((int)r.X + 128, (int)r.Y + 192));
-
-                if (r.X <= least.X)
-                {
-                    least.X = r.X;
-                    leftAnchor = r;
-                }
-
-                if (r.Y <= least.Y)
-                {
-                    least.Y = r.Y;
-                    topAnchor = r;
-                }
-
-                if (r.X >= most.X)
-                {
-                    most.X = r.X;
-                    rightAnchor = r;
-                }
-
-                if (r.Y >= most.Y)
-                {
-                    most.Y = r.Y;
-                    bottomAnchor = r;
-                }
-            }
+            // Combine the additional positions to the main set of positions
+            path.UnionWith(addedPath);
 
             return path;
         }
@@ -351,6 +363,8 @@ namespace NotAnMMO
             mapSections[x, y].positions.Add(position);
         }
 
+
+
         private void createMapSections(GraphicsDevice graphics)
         {
             mapSectionWidth = (int)(((graphics.Viewport.Width / 0.4) + 64) / 64) * 64;
@@ -358,7 +372,7 @@ namespace NotAnMMO
 
 
 
-            mapSections = new mapSection[(dungeonContainer.Width / mapSectionWidth) + 1, (dungeonContainer.Height / mapSectionHeight) + 1];
+            mapSections = new mapSection[(dungeonContainer.Width / mapSectionWidth) + 2, (dungeonContainer.Height / mapSectionHeight) + 2];
 
 
             for (var x = 0; x < mapSections.GetLength(0); x++)
@@ -369,10 +383,6 @@ namespace NotAnMMO
                 }
             }
         }
-
-
-
-
 
 
 
@@ -611,193 +621,6 @@ namespace NotAnMMO
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-        /*
-        private void setWalls(HashSet<Vector2> positions, HashSet<Vector2> wallPositions, HashSet<Vector2> walls, bool advanced)
-        {
-            // Sets specific kinds of tiles
-            if (advanced)
-            {
-                foreach (var r in wallPositions)
-                    player.LoadCollider(createTile(r, "rightWall", true));
-
-                /*Vector2 tempPosition = new Vector2();
-
-
-                // Sets the Walls and the Corner tiles
-                foreach (var r in wallPositions)
-                {
-                    var inserted = false;
-
-                    int wallCount = 0;
-
-                    if (wallPositions.Contains(new Vector2(r.X - 64, r.Y)))
-                        wallCount += 1;
-
-                    if (wallPositions.Contains(new Vector2(r.X + 64, r.Y)))
-                        wallCount += 1;
-
-                    if (wallPositions.Contains(new Vector2(r.X, r.Y + 64)))
-                        wallCount += 1;
-
-                    if (wallPositions.Contains(new Vector2(r.X, r.Y - 64)))
-                        wallCount += 1;
-
-
-                    if (wallCount == 3 &&
-                        (!positions.Contains(new Vector2(r.X + 64, r.Y)) ||
-                         !positions.Contains(new Vector2(r.X - 64, r.Y)) ||
-                         !positions.Contains(new Vector2(r.X, r.Y + 64)) ||
-                         !positions.Contains(new Vector2(r.X, r.Y - 64))))
-                    {
-
-                        player.LoadCollider(createTile(r, "rightWall", true));
-                        inserted = true;
-                    }
-                    else {
-
-                        // Top Left
-                        if (!positions.Contains(new Vector2(r.X - 64, r.Y - 64)))
-                        {
-                            if (wallPositions.Contains(new Vector2(r.X, r.Y - 64)) && wallPositions.Contains(new Vector2(r.X - 64, r.Y)))
-                            {
-                                inserted = true;
-
-                                player.LoadCollider(createTile(r, "bottomRightCorner", true));
-                                player.LoadCollider(createTile(new Vector2(r.X, r.Y + 64), "longRightCornerWall", true));
-                                player.LoadCollider(createTile(new Vector2(r.X, r.Y + 64 * 2), "longRightCornerWall", true));
-                            }
-                            else if (wallPositions.Contains(new Vector2(r.X, r.Y + 64)) && wallPositions.Contains(new Vector2(r.X + 64, r.Y)))
-                            {
-                                inserted = true;
-
-                                player.LoadCollider(createTile(r, "innerBottomRightCorner", true));
-                            }
-                        }
-
-                        // Top Right
-                        if (!inserted && !positions.Contains(new Vector2(r.X + 64, r.Y - 64)))
-                        {
-                            if (wallPositions.Contains(new Vector2(r.X, r.Y - 64)) && wallPositions.Contains(new Vector2(r.X + 64, r.Y)))
-                            {
-                                inserted = true;
-
-                                player.LoadCollider(createTile(r, "bottomLeftCorner", true));
-                                player.LoadCollider(createTile(new Vector2(r.X, r.Y + 64), "longLeftCornerWall", true));
-                                player.LoadCollider(createTile(new Vector2(r.X, r.Y + 64 * 2), "longLeftCornerWall", true));
-                            }
-                            else if (wallPositions.Contains(new Vector2(r.X, r.Y + 64)) && wallPositions.Contains(new Vector2(r.X - 64, r.Y)))
-                            {
-                                inserted = true;
-
-                                player.LoadCollider(createTile(r, "innerBottomLeftCorner", true));
-                            }
-                        }
-
-                        // Bottom Left
-                        if (!inserted && !positions.Contains(new Vector2(r.X - 64, r.Y + 64)))
-                        {
-                            if (wallPositions.Contains(new Vector2(r.X, r.Y + 64)) && wallPositions.Contains(new Vector2(r.X - 64, r.Y)))
-                            {
-                                inserted = true;
-
-                                player.LoadCollider(createTile(r, "topRightCorner", true));
-                            }
-                            else if (wallPositions.Contains(new Vector2(r.X, r.Y - 64)) && wallPositions.Contains(new Vector2(r.X + 64, r.Y)))
-                            {
-                                inserted = true;
-
-                                player.LoadCollider(createTile(r, "innerTopRightCorner", true));
-                            }
-                        }
-
-                        // Bottom Right
-                        if (!inserted && !positions.Contains(new Vector2(r.X + 64, r.Y + 64)))
-                        {
-                            if (wallPositions.Contains(new Vector2(r.X, r.Y + 64)) && wallPositions.Contains(new Vector2(r.X + 64, r.Y)))
-                            {
-                                inserted = true;
-
-                                player.LoadCollider(createTile(r, "topLeftCorner", true));
-                            }
-                            else if (wallPositions.Contains(new Vector2(r.X, r.Y - 64)) && wallPositions.Contains(new Vector2(r.X - 64, r.Y)))
-                            {
-                                inserted = true;
-                                
-                                player.LoadCollider(createTile(r, "innerTopLeftCorner", true));
-                            }
-                        }
-                    }
-
-
-                    if (!inserted)
-                    {
-                        //player.LoadCollider(createTile(r, "leftWall", true));
-                    }
-
-
-
-
-
-
-
-
-
-
-
-
-
-                    /*int cornerCount = 0;
-
-                    if (wallPositions.Contains(new Vector2(r.X - 64, r.Y)))
-                        cornerCount += 1;
-
-                    if (wallPositions.Contains(new Vector2(r.X + 64, r.Y)))
-                        cornerCount += 1;
-
-                    if (wallPositions.Contains(new Vector2(r.X, r.Y + 64)))
-                        cornerCount += 1;
-
-                    if (wallPositions.Contains(new Vector2(r.X, r.Y - 64)))
-                        cornerCount += 1;
-
-
-                
-            }
-            // Simply sets what tiles are general walls
-            else
-            {
-                // Sets wall positions from all tile position
-                foreach (var r in positions)
-                {
-                    if (
-                        !positions.Contains(new Vector2(r.X - 64, r.Y)) ||
-                        !positions.Contains(new Vector2(r.X - 64, r.Y - 64)) ||
-                        !positions.Contains(new Vector2(r.X - 64, r.Y + 64)) ||
-                        !positions.Contains(new Vector2(r.X + 64, r.Y)) ||
-                        !positions.Contains(new Vector2(r.X + 64, r.Y - 64)) ||
-                        !positions.Contains(new Vector2(r.X + 64, r.Y + 64)) ||
-                        !positions.Contains(new Vector2(r.X, r.Y - 64)) ||
-                        !positions.Contains(new Vector2(r.X, r.Y + 64)))
-                    {
-                        wallPositions.Add(new Vector2(r.X, r.Y));
-                        walls.Add(new Vector2(r.X, r.Y));
-                    }
-                }
-            }
-        }
-        */
-
         private void setFloors()
         {
             foreach (var r in positions)
@@ -809,6 +632,7 @@ namespace NotAnMMO
                 }
             }
         }
+
 
 
         private Tile createTile(Vector2 pos, String type, bool collsion)
@@ -824,6 +648,7 @@ namespace NotAnMMO
 
             return currentTile;
         }
+
 
 
         private void createSpawns()
@@ -888,10 +713,6 @@ namespace NotAnMMO
 
             System.Diagnostics.Debug.WriteLine("TOTAL TIME FOR SPAWN CREATIONS: " + (float)elapsedMilliseconds / 1000);
         }
-
-
-        
-
 
 
 
@@ -960,25 +781,6 @@ namespace NotAnMMO
 
 
 
-    public static class Direction2D
-    {
-        public static List<Vector2> cardinalDirectionsList = new List<Vector2>
-        {
-            new Vector2(0, 64),
-            new Vector2(64, 0),
-            new Vector2(0, -64),
-            new Vector2(-64, 0)
-        };
-
-        public static Vector2 RandomCardinalDirection(Random random)
-        {
-            var rand = random.Next(0, cardinalDirectionsList.Count);
-
-            return cardinalDirectionsList[rand];
-        }
-    }
-
-
     public class Tile
     {
         public Rectangle tileContainer;
@@ -1034,6 +836,7 @@ namespace NotAnMMO
     }
 
 
+
     public class mapSection
     {
         public Rectangle sectionContainer;
@@ -1067,236 +870,3 @@ namespace NotAnMMO
     }
     
 }
-
-// Perlin Noise
-/*
-public class PerlinNoise
-{
-    private int[] permutation;
-    private Random random;
-
-    public PerlinNoise(int seed)
-    {
-        permutation = new int[256];
-        random = new Random(seed);
-
-        for (int i = 0; i < 256; i++)
-        {
-            permutation[i] = i;
-        }
-
-        // Shuffle the permutation array
-        for (int i = 0; i < 256; i++)
-        {
-            int j = random.Next(256);
-            int temp = permutation[i];
-            permutation[i] = permutation[j];
-            permutation[j] = temp;
-        }
-    }
-
-    private double Fade(double t)
-    {
-        return t * t * t * (t * (t * 6 - 15) + 10);
-    }
-
-    private double Grad(int hash, double x, double y)
-    {
-        int h = hash & 15;
-        double grad = 1.0 + (h & 7); // Gradient value from 1.0 to 2.0
-        if ((h & 8) != 0) grad = -grad; // Randomly invert the gradient
-
-        return (grad * x) + (h >= 8 ? 0 : y);
-    }
-
-    public double Noise(double x, double y)
-    {
-        int X = (int)Math.Floor(x) & 255;
-        int Y = (int)Math.Floor(y) & 255;
-
-        x -= Math.Floor(x);
-        y -= Math.Floor(y);
-
-        double u = Fade(x);
-        double v = Fade(y);
-
-        int A = permutation[X] + Y;
-        int B = permutation[(X + 1) & 255] + Y;
-        int AA = permutation[A] & 255;
-        int BA = permutation[B] & 255;
-
-        return Grad(permutation[AA], x, y) +
-               (u * (Grad(permutation[BA], x - 1, y) - Grad(permutation[AA], x, y))) +
-               (v * (Grad(permutation[AA + 1], x, y - 1) - Grad(permutation[AA], x, y)));
-    }
-}
-*/
-
-/*
-public class PointGenerator
-{
-    public List<Vector2> GeneratePointsInRectangle(Rectangle rectangle, int numberOfPoints, double scale, int seed)
-    {
-        List<Vector2> points = new List<Vector2>();
-
-        // Set up PerlinNoise with the given seed
-        PerlinNoise perlinNoise = new PerlinNoise(seed);
-
-        // Generate points using Perlin noise
-        for (int i = 0; i < numberOfPoints; i++)
-        {
-            // Sample Perlin noise in the range [0, 1] for x and y coordinates
-            double noiseX = (perlinNoise.Noise(i * scale, 0) + 1) / 2.0;
-            double noiseY = (perlinNoise.Noise(0, i * scale) + 1) / 2.0;
-
-            // Map the normalized noise values to the dimensions of the rectangle
-            float pointX = rectangle.X + (float)(noiseX * rectangle.Width);
-            float pointY = rectangle.Y + (float)(noiseY * rectangle.Height);
-
-            points.Add(new Vector2(pointX, pointY));
-        }
-
-        return points;
-    }
-}
-*/
-
-
-
-/*
-        private HashSet<Vector2> SimpleRandomWalk(Rectangle container, int walkLength)
-        {
-            HashSet<Vector2> path = new HashSet<Vector2>();
-
-            var previousePosition = new Vector2(((container.X + (container.Width / 2)) / 64) * 64, ((container.Y + (container.Height / 2)) / 64) * 64);
-
-            path.Add(previousePosition);
-
-            player.position = previousePosition;
-
-            var initial = 0;
-
-            least = most = new Vector2(((container.X + (container.Width / 2)) / 64) * 64, ((container.Y + (container.Height / 2)) / 64) * 64);
-
-            while (true)
-            {
-                for (int i = 0; i < walkLength; i++)
-                {
-                    var newPosition = previousePosition + Direction2D.RandomCardinalDirection(random);
-
-                    if (newPosition.X - 128 >= container.X &&
-                         newPosition.Y - 256 >= container.Y &&
-                         newPosition.X + 192 <= container.X + container.Width &&
-                         newPosition.Y + 256 <= container.Y + container.Height)
-                    {
-                        path.Add(newPosition);
-                        mapSectionInsert(newPosition);
-                        previousePosition = newPosition;
-                    }
-                    else
-                    {
-                        i--;
-                    }
-
-                    if (path.Count >= 100000)
-                        break;
-                }
-
-                if (path.Count >= walkLength * 0.14 || path.Count >= 200000)
-                {
-                    break;
-                }
-            }
-
-            System.Diagnostics.Debug.WriteLine(path.Count + "\n\n");
-
-            truePositions.UnionWith(path);
-
-            HashSet<Vector2> tempPath = new HashSet<Vector2>();
-            tempPath.UnionWith(path);
-
-            foreach (var r in tempPath)
-            {
-                // First layer
-                path.Add(new Vector2((int)r.X + 64, (int)r.Y));
-                path.Add(new Vector2((int)r.X - 64, (int)r.Y));
-                path.Add(new Vector2((int)r.X, (int)r.Y + 64));
-                path.Add(new Vector2((int)r.X, (int)r.Y - 64));
-                path.Add(new Vector2((int)r.X + 64, (int)r.Y + 64));
-                path.Add(new Vector2((int)r.X + 64, (int)r.Y - 64));
-                path.Add(new Vector2((int)r.X - 64, (int)r.Y + 64));
-                path.Add(new Vector2((int)r.X - 64, (int)r.Y - 64));
-
-
-                // Second Layer
-                path.Add(new Vector2((int)r.X - 128, (int)r.Y));
-                path.Add(new Vector2((int)r.X - 128, (int)r.Y + 64));
-                path.Add(new Vector2((int)r.X - 128, (int)r.Y + 128));
-                path.Add(new Vector2((int)r.X - 128, (int)r.Y - 64));
-                path.Add(new Vector2((int)r.X - 128, (int)r.Y - 128));
-                path.Add(new Vector2((int)r.X - 64, (int)r.Y - 128));
-                path.Add(new Vector2((int)r.X - 64, (int)r.Y + 128));
-                path.Add(new Vector2((int)r.X, (int)r.Y - 128));
-                path.Add(new Vector2((int)r.X, (int)r.Y + 128));
-                path.Add(new Vector2((int)r.X + 64, (int)r.Y - 128));
-                path.Add(new Vector2((int)r.X + 64, (int)r.Y + 128));
-                path.Add(new Vector2((int)r.X + 128, (int)r.Y));
-                path.Add(new Vector2((int)r.X + 128, (int)r.Y + 64));
-                path.Add(new Vector2((int)r.X + 128, (int)r.Y + 128));
-                path.Add(new Vector2((int)r.X + 128, (int)r.Y - 64));
-                path.Add(new Vector2((int)r.X + 128, (int)r.Y - 128));
-
-
-                // Additional top tiles
-                path.Add(new Vector2((int)r.X - 128, (int)r.Y - 192));
-                path.Add(new Vector2((int)r.X - 64, (int)r.Y - 192));
-                path.Add(new Vector2((int)r.X, (int)r.Y - 192));
-                path.Add(new Vector2((int)r.X + 64, (int)r.Y - 192));
-                path.Add(new Vector2((int)r.X + 128, (int)r.Y - 192));
-                // Additional top tiles
-                path.Add(new Vector2((int)r.X - 128, (int)r.Y - 256));
-                path.Add(new Vector2((int)r.X - 64, (int)r.Y - 256));
-                path.Add(new Vector2((int)r.X, (int)r.Y - 256));
-                path.Add(new Vector2((int)r.X + 64, (int)r.Y - 256));
-                path.Add(new Vector2((int)r.X + 128, (int)r.Y - 256));
-
-                // Additional bottom tiles
-                path.Add(new Vector2((int)r.X - 128, (int)r.Y + 192));
-                path.Add(new Vector2((int)r.X - 64, (int)r.Y + 192));
-                path.Add(new Vector2((int)r.X, (int)r.Y + 192));
-                path.Add(new Vector2((int)r.X + 64, (int)r.Y + 192));
-                path.Add(new Vector2((int)r.X + 128, (int)r.Y + 192));
-
-                if (r.X <= least.X)
-                {
-                    least.X = r.X;
-                    leftAnchor = r;
-                }
-
-                if (r.Y <= least.Y)
-                {
-                    least.Y = r.Y;
-                    topAnchor = r;
-                }
-
-                if (r.X >= most.X)
-                {
-                    most.X = r.X;
-                    rightAnchor = r;
-                }
-
-                if (r.Y >= most.Y)
-                {
-                    most.Y = r.Y;
-                    bottomAnchor = r;
-                }
-
-                if (initial == 0)
-                {
-                    playerPosition = new Vector2((int)r.X + 32, (int)r.Y + 32);
-                    initial += 1;
-                }
-            }
-
-            return path;
-        }*/
